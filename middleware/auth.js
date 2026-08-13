@@ -3,51 +3,22 @@ const jwt = require("jsonwebtoken");
 
 const protect = async (req, res, next) => {
   try {
-    let token;
+    const authHeader = req.headers.authorization;
 
-    // =========================
-    // GET TOKEN
-    // =========================
-    if (
-      req.headers.authorization &&
-      req.headers.authorization.startsWith("Bearer ")
-    ) {
-      token = req.headers.authorization.split(" ")[1];
-    }
-
-    // =========================
-    // NO TOKEN
-    // =========================
-    if (!token) {
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return res.status(401).json({
         success: false,
         message: "Unauthorized. No token provided.",
       });
     }
 
-    // =========================
-    // VERIFY TOKEN
-    // =========================
+    const token = authHeader.split(" ")[1];
+
     const decoded = jwt.verify(
       token,
       process.env.JWT_SECRET
     );
 
-    console.log("Decoded Token:", decoded);
-
-    // =========================
-    // CHECK USER ID
-    // =========================
-    if (!decoded.id) {
-      return res.status(401).json({
-        success: false,
-        message: "Unauthorized. Invalid token.",
-      });
-    }
-
-    // =========================
-    // FIND USER
-    // =========================
     const user = await User.findById(decoded.id);
 
     if (!user) {
@@ -57,13 +28,9 @@ const protect = async (req, res, next) => {
       });
     }
 
-    // =========================
-    // SET USER
-    // =========================
     req.user = user;
 
     next();
-
   } catch (error) {
     console.log("Protect Error:", error.message);
 
@@ -74,9 +41,6 @@ const protect = async (req, res, next) => {
   }
 };
 
-// =========================
-// ADMIN MIDDLEWARE
-// =========================
 const admin = (req, res, next) => {
   if (!req.user) {
     return res.status(401).json({

@@ -6,38 +6,101 @@ const jwt = require("jsonwebtoken");
 // =====================================================
 const sendOtp = async (req, res) => {
   try {
-    const { name, phone } = req.body || {};
+    const { phone, type, name } = req.body || {};
 
-    if (!name || !phone) {
+    if (!phone) {
       return res.status(400).json({
         success: false,
-        message: "Name and phone number are required",
+        message: "Phone number is required",
       });
     }
 
-    const exist = await User.findOne({ phone });
+    const phoneNumber = Number(phone);
 
-    if (exist) {
+    if (
+      !phoneNumber ||
+      phone.toString().length !== 10
+    ) {
       return res.status(400).json({
         success: false,
-        message: "Your number already exists",
+        message: "Valid 10 digit phone number is required",
       });
     }
 
-    const user = await User.create({
-      phone,
-      name,
+    // ============================
+    // REGISTER
+    // ============================
+
+    if (type === "register") {
+
+      if (!name || !name.trim()) {
+        return res.status(400).json({
+          success: false,
+          message: "Name is required",
+        });
+      }
+
+      const exist = await User.findOne({
+        phone: phoneNumber,
+      });
+
+      if (exist) {
+        return res.status(400).json({
+          success: false,
+          message: "Your number already exists",
+        });
+      }
+
+      const user = await User.create({
+        name: name.trim(),
+        phone: phoneNumber,
+        role: "user",
+      });
+
+      const otp = "123456";
+
+      return res.status(200).json({
+        success: true,
+        message: "OTP sent successfully",
+        otp,
+        user,
+        userId: user._id,
+      });
+    }
+
+    // ============================
+    // LOGIN
+    // ============================
+
+    if (type === "login") {
+
+      const exist = await User.findOne({
+        phone: phoneNumber,
+      });
+
+      if (!exist) {
+        return res.status(404).json({
+          success: false,
+          message: "User not found. Please register first",
+        });
+      }
+
+      const otp = "123456";
+
+      return res.status(200).json({
+        success: true,
+        message: "OTP sent successfully",
+        otp,
+        user: exist,
+        userId: exist._id,
+      });
+    }
+
+    return res.status(400).json({
+      success: false,
+      message: "Request type is required",
     });
 
-    // Static OTP
-    const otp = "123456";
-
-    return res.status(200).json({
-      success: true,
-      message: "OTP sent successfully",
-      otp,
-      user,
-    });
   } catch (error) {
     console.error("Send OTP Error:", error);
 
@@ -53,37 +116,60 @@ const sendOtp = async (req, res) => {
 // =====================================================
 const verifyOtp = async (req, res) => {
   try {
-    const { id, otp } = req.body || {};
+    const { phone, otp } = req.body || {};
 
-    if (!id || !otp) {
+    console.log("VERIFY BODY:", req.body);
+
+    // =================================================
+    // VALIDATION
+    // =================================================
+    if (!phone || !otp) {
       return res.status(400).json({
         success: false,
-        message: "User ID and OTP are required",
+        message: "Phone number and OTP are required",
       });
     }
 
-    // Find user by MongoDB _id
-    const user = await User.findById(id);
+    const phoneNumber = Number(phone);
+
+    if (!phoneNumber || phone.toString().length !== 10) {
+      return res.status(400).json({
+        success: false,
+        message: "Valid 10 digit phone number is required",
+      });
+    }
+
+    // =================================================
+    // FIND USER BY PHONE
+    // =================================================
+    const user = await User.findOne({
+      phone: phoneNumber,
+    });
 
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: "User not found",
+        message: "User not found. Please register first",
       });
     }
 
-    // Static OTP
-    if (otp !== "123456") {
+    // =================================================
+    // CHECK OTP
+    // =================================================
+    if (otp.toString() !== "123456") {
       return res.status(400).json({
         success: false,
         message: "Invalid OTP",
       });
     }
 
-    // JWT token
+    // =================================================
+    // JWT TOKEN
+    // =================================================
     const token = jwt.sign(
       {
         id: user._id.toString(),
+        role: user.role,
       },
       process.env.JWT_SECRET,
       {
@@ -91,12 +177,16 @@ const verifyOtp = async (req, res) => {
       }
     );
 
+    // =================================================
+    // SUCCESS
+    // =================================================
     return res.status(200).json({
       success: true,
       message: "Login Successful",
       token,
       user,
     });
+
   } catch (error) {
     console.error("Verify OTP Error:", error);
 
@@ -120,6 +210,7 @@ const totalUser = async (req, res) => {
       success: true,
       users,
     });
+
   } catch (error) {
     console.error("Get Users Error:", error);
 
@@ -157,6 +248,7 @@ const profile = async (req, res) => {
       success: true,
       user,
     });
+
   } catch (error) {
     console.error("Profile Error:", error);
 
@@ -203,7 +295,7 @@ const updateprofile = async (req, res) => {
     }
 
     if (phone) {
-      user.phone = phone;
+      user.phone = Number(phone);
     }
 
     await user.save();
@@ -213,6 +305,7 @@ const updateprofile = async (req, res) => {
       message: "Profile updated successfully",
       user,
     });
+
   } catch (error) {
     console.error("Update Profile Error:", error);
 
@@ -228,11 +321,6 @@ const updateprofile = async (req, res) => {
 // =====================================================
 const deleteProfile = async (req, res) => {
   try {
-    // IMPORTANT:
-    // Frontend URL se ID bhej raha hai:
-    // /user/delete/:id
-    //
-    // Isliye req.params.id use karna hai.
     const { id } = req.params;
 
     if (!id) {
@@ -257,6 +345,7 @@ const deleteProfile = async (req, res) => {
       success: true,
       message: "User deleted successfully",
     });
+
   } catch (error) {
     console.error("Delete User Error:", error);
 

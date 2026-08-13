@@ -1,14 +1,20 @@
-const User = require("../models/user");
 const jwt = require("jsonwebtoken");
+const User = require("../models/user");
 
+// ==========================================
+// PROTECT
+// ==========================================
 const protect = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
 
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    if (
+      !authHeader ||
+      !authHeader.startsWith("Bearer ")
+    ) {
       return res.status(401).json({
         success: false,
-        message: "Unauthorized. No token provided.",
+        message: "No token provided",
       });
     }
 
@@ -24,7 +30,7 @@ const protect = async (req, res, next) => {
     if (!user) {
       return res.status(401).json({
         success: false,
-        message: "Unauthorized. User not found.",
+        message: "User not found",
       });
     }
 
@@ -32,27 +38,30 @@ const protect = async (req, res, next) => {
 
     next();
   } catch (error) {
-    console.log("Protect Error:", error.message);
+    console.error("Protect Error:", error);
 
     return res.status(401).json({
       success: false,
-      message: "Unauthorized. Invalid or expired token.",
+      message: "Invalid or expired token",
     });
   }
 };
 
+// ==========================================
+// ADMIN
+// ==========================================
 const admin = (req, res, next) => {
   if (!req.user) {
     return res.status(401).json({
       success: false,
-      message: "Unauthorized",
+      message: "Authentication required",
     });
   }
 
   if (req.user.role !== "admin") {
     return res.status(403).json({
       success: false,
-      message: "Admin access required",
+      message: "Only admin can access this route",
     });
   }
 

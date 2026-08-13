@@ -1,44 +1,82 @@
-const User = require("../models/user")
-const jwt = require("jsonwebtoken")
+const User = require("../models/user");
+const jwt = require("jsonwebtoken");
 
-const protect = async(req,res , next)=>{
-try {
+const protect = async (req, res, next) => {
+  try {
     let token;
-    if(
-        req.headers.authorization && req.headers.authorization.startsWith("Bearer")
-    ){
-        token = req.headers.authorization.split(" ")[1];
+
+    // =========================
+    // GET TOKEN
+    // =========================
+    if (
+      req.headers.authorization &&
+      req.headers.authorization.startsWith("Bearer ")
+    ) {
+      token = req.headers.authorization.split(" ")[1];
     }
 
-    if(!token){
-        return res.json({
-            success:false,
-            message: "Access denied. No token provided."
-        })
+    // =========================
+    // NO TOKEN
+    // =========================
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized. No token provided.",
+      });
     }
- const decoded = jwt.verify(token , process.env.JWT_SECRET)
 
- const user = await User.findById(decoded.id)
- if(!user){
-       return res.json({
-            success:false,
-            message: "user not found."
-        })
- }
- req.user = user
+    // =========================
+    // VERIFY TOKEN
+    // =========================
+    const decoded = jwt.verify(
+      token,
+      process.env.JWT_SECRET
+    );
 
- next()
-} catch (error) {
-      return res.json({
+    console.log("Decoded Token:", decoded);
+
+    // =========================
+    // CHECK USER ID
+    // =========================
+    if (!decoded.id) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized. Invalid token.",
+      });
+    }
+
+    // =========================
+    // FIND USER
+    // =========================
+    const user = await User.findById(decoded.id);
+
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized. User not found.",
+      });
+    }
+
+    // =========================
+    // SET USER
+    // =========================
+    req.user = user;
+
+    next();
+
+  } catch (error) {
+    console.log("Protect Error:", error.message);
+
+    return res.status(401).json({
       success: false,
-      message: "Invalid or expired token.",
+      message: "Unauthorized. Invalid or expired token.",
     });
-}
-}
+  }
+};
 
-
-//admin
-
+// =========================
+// ADMIN MIDDLEWARE
+// =========================
 const admin = (req, res, next) => {
   if (!req.user) {
     return res.status(401).json({
@@ -58,6 +96,6 @@ const admin = (req, res, next) => {
 };
 
 module.exports = {
-    admin,
-    protect
-}
+  protect,
+  admin,
+};

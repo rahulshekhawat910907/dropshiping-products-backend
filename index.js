@@ -19,6 +19,13 @@ app.use(cors(corsOptions));
 app.options(/.*/, cors(corsOptions));
 app.use(express.json());
 
+app.get("/", (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: "Backend is running",
+  });
+});
+
 app.get("/health", (req, res) => {
   res.status(200).json({
     success: true,

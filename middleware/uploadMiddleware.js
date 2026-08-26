@@ -6,11 +6,15 @@ const {CloudinaryStorage,} = require("multer-storage-cloudinary");
 const cloudinary =
   require("../config/Cloudnary");
 
-const hasCloudinaryConfig = [
+const cloudinaryConfig = [
   "CLOUDINARY_CLOUD_NAME",
   "CLOUDINARY_API_KEY",
   "CLOUDINARY_API_SECRET",
-].every((key) => process.env[key]);
+].map((key) => process.env[key]?.trim());
+
+const hasCloudinaryConfig =
+  cloudinaryConfig.every(Boolean) &&
+  !cloudinaryConfig.includes("rahulsingh");
 
 // ==========================================
 // CLOUDINARY STORAGE

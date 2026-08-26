@@ -80,7 +80,8 @@ const toBoolean = (value) => {
 const validateSupplier = async (
   supplierId,
   isDropshipping,
-  supplierPrice
+  supplierPrice,
+  allowExternalSupplier = false
 ) => {
   const dropshipping =
     toBoolean(isDropshipping);
@@ -93,6 +94,19 @@ const validateSupplier = async (
   }
 
   if (!supplierId) {
+    if (allowExternalSupplier) {
+      if (supplierPrice === undefined || supplierPrice === null || supplierPrice === "") {
+        return { error: "Supplier price is required" };
+      }
+
+      const externalPrice = Number(supplierPrice);
+      if (Number.isNaN(externalPrice) || externalPrice < 0) {
+        return { error: "Supplier price cannot be negative" };
+      }
+
+      return { error: null, supplier: null };
+    }
+
     return {
       error:
         "Supplier is required for dropshipping product",
@@ -161,7 +175,8 @@ const validateSupplier = async (
 // =====================================================
 
 const validateProductData = async (
-  data
+  data,
+  options = {}
 ) => {
   const {
     name,
@@ -172,7 +187,7 @@ const validateProductData = async (
     stock,
     isDropshipping,
     supplier,
-    supplierPrice,
+    supplierPrice
   } = data;
 
   // NAME
@@ -939,7 +954,7 @@ const submitProduct = async (req, res) => {
       isDropshipping: data.isDropshipping,
       supplier: data.supplier,
       supplierPrice: data.supplierPrice,
-    });
+    }, { allowExternalSupplier: true });
 
     if (validationError) {
       return res.status(400).json({ success: false, message: validationError });

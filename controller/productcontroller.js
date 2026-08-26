@@ -926,7 +926,7 @@ const submitProduct = async (req, res) => {
     const uploadedImage = req.file
       ? typeof filePath === "string" && filePath.startsWith("http")
         ? filePath
-        : `${req.protocol}://${req.get("host")}/uploads/products/${req.file.filename}`
+        : `https://${req.get("host")}/uploads/products/${req.file.filename}`
       : "";
 
     const bodyImage =

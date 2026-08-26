@@ -6,7 +6,7 @@ const getImageUrl = (req, file) => {
     return file.path;
   }
 
-  return `${req.protocol}://${req.get("host")}/uploads/products/${file.filename}`;
+  return `https://${req.get("host")}/uploads/products/${file.filename}`;
 };
 
 // ==========================================

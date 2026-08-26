@@ -12,6 +12,7 @@ const {
 } = require("../controller/userController");
 
 const authMiddleware = require("../middleware/authMiddleware");
+const adminMiddleware = require("../middleware/adminMiddleware");
 
 const router = express.Router();
 
@@ -47,6 +48,7 @@ router.put(
 router.get(
   "/all",
   authMiddleware,
+  adminMiddleware,
   getAllUsers
 );
 
@@ -54,6 +56,7 @@ router.get(
 router.get(
   "/single/:id",
   authMiddleware,
+  adminMiddleware,
   getSingleUser
 );
 
@@ -61,6 +64,7 @@ router.get(
 router.delete(
   "/delete/:id",
   authMiddleware,
+  adminMiddleware,
   deleteUser
 );
 
@@ -68,6 +72,7 @@ router.delete(
 router.put(
   "/role/:id",
   authMiddleware,
+  adminMiddleware,
   updateUserRole
 );
 

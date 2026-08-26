@@ -1,6 +1,7 @@
 const express = require("express");
 
 const {
+  createAdmin,
   getAllUsers,
   getSingleUser,
   updateUser,
@@ -9,7 +10,14 @@ const {
   getUserStatistics,
 } = require("../controller/adminController");
 
+const authMiddleware = require("../middleware/authMiddleware");
+const adminMiddleware = require("../middleware/adminMiddleware");
+
 const router = express.Router();
+
+router.use(authMiddleware, adminMiddleware);
+
+router.post("/create", createAdmin);
 
 // ==========================================
 // USER MANAGEMENT

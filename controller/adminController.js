@@ -4,6 +4,52 @@ const Cart = require("../models/cart");
 const Wishlist = require("../models/wishlist");
 const mongoose = require("mongoose");
 
+const createAdmin = async (req, res) => {
+  try {
+    const { name, phone } = req.body;
+    const cleanName = String(name || "").trim();
+    const cleanPhone = String(phone || "").trim();
+
+    if (!cleanName || !/^[6-9]\d{9}$/.test(cleanPhone)) {
+      return res.status(400).json({
+        success: false,
+        message: "Valid name and 10 digit phone are required",
+      });
+    }
+
+    let user = await User.findOne({ phone: cleanPhone });
+
+    if (user) {
+      user.name = cleanName;
+      user.role = "admin";
+      await user.save();
+    } else {
+      user = await User.create({
+        name: cleanName,
+        phone: cleanPhone,
+        role: "admin",
+      });
+    }
+
+    return res.status(201).json({
+      success: true,
+      message: "Admin created successfully",
+      user: {
+        id: user._id,
+        name: user.name,
+        phone: user.phone,
+        role: user.role,
+      },
+    });
+  } catch (error) {
+    console.error("CREATE ADMIN ERROR:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to create admin",
+    });
+  }
+};
+
 // =====================================================
 // GET ALL USERS
 // =====================================================
@@ -635,6 +681,7 @@ const getUserStatistics = async (
 // =====================================================
 
 module.exports = {
+  createAdmin,
   getAllUsers,
   getSingleUser,
   updateUser,

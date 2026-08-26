@@ -1,15 +1,106 @@
-const router = require("express").Router()
-const {  productCreate, getAllProducts, getSingleProduct, updateProduct,  deleteProduct,} = require("../controller/productcontroller")
+const express = require("express");
 
+const router = express.Router();
 
-const {admin , protect} = require("../middleware/auth")
+const {
+  createProduct,
+  submitProduct,
+  getMyProducts,
+  approveProduct,
+  createMultipleProducts,
+  getAllProducts,
+  getSingleProduct,
+  updateProduct,
+  deleteProduct,
+  toggleProductStatus,
+  getDropshippingProducts,
+} = require("../controller/productController");
 
+const authMiddleware = require("../middleware/authMiddleware");
+const adminMiddleware = require("../middleware/adminMiddleware");
+const upload = require("../middleware/uploadMiddleware");
 
+// =====================================================
+// CREATE SINGLE PRODUCT
+// =====================================================
 
-router.post("/create", protect,admin , productCreate)
-router.get("/all" , getAllProducts)
-router.get("/single/:id" , getSingleProduct)
-router.put("/update/:id",protect ,admin , updateProduct)
-router.delete("/delete/:id",protect ,admin , deleteProduct)
+router.post(
+  "/create",
+  createProduct
+);
 
-module.exports = router
+router.post(
+  "/submit",
+  authMiddleware,
+  upload.single("image"),
+  submitProduct
+);
+router.get("/mine", authMiddleware, getMyProducts);
+router.patch("/approve/:id", authMiddleware, adminMiddleware, approveProduct);
+
+// =====================================================
+// CREATE MULTIPLE PRODUCTS
+// =====================================================
+
+router.post(
+  "/create-multiple",
+  authMiddleware,
+  adminMiddleware,
+  createMultipleProducts
+);
+
+// =====================================================
+// GET ALL PRODUCTS
+// =====================================================
+
+router.get(
+  "/all",
+  getAllProducts
+);
+
+// =====================================================
+// GET DROPSHIPPING PRODUCTS
+// =====================================================
+
+router.get(
+  "/dropshipping",
+  getDropshippingProducts
+);
+
+// =====================================================
+// GET SINGLE PRODUCT
+// =====================================================
+
+router.get(
+  "/single/:id",
+  getSingleProduct
+);
+
+// =====================================================
+// UPDATE PRODUCT
+// =====================================================
+
+router.put(
+  "/update/:id",
+  updateProduct
+);
+
+// =====================================================
+// DELETE PRODUCT
+// =====================================================
+
+router.delete(
+  "/delete/:id",
+  deleteProduct
+);
+
+// =====================================================
+// TOGGLE ACTIVE / INACTIVE
+// =====================================================
+
+router.patch(
+  "/toggle/:id",
+  toggleProductStatus
+);
+
+module.exports = router;

@@ -1,22 +1,74 @@
-const router = require("express").Router()
+const express = require("express");
 
-const {admin , protect} = require("../middleware/auth")
+const {
+  sendOtp,
+  verifyOtp,
+  getProfile,
+  updateProfile,
+  getAllUsers,
+  getSingleUser,
+  deleteUser,
+  updateUserRole,
+} = require("../controller/userController");
 
-const {sendOtp, verifyOtp ,totalUser  , profile , updateprofile , deleteProfile} =  require("../controller/userController")
+const authMiddleware = require("../middleware/authMiddleware");
 
-router.post("/send" , sendOtp)
-router.post("/verify" , verifyOtp)
+const router = express.Router();
 
-//admin
-router.get("/all",protect,admin , totalUser)
+// =====================================================
+// AUTH
+// =====================================================
 
-//profile
-router.get("/profile/:id" , protect , profile)
-router.put("/update/:id" , protect , updateprofile)
-router.delete("/delete/:id" , protect ,admin , deleteProfile)
+router.post("/send-otp", sendOtp);
 
+router.post("/verify-otp", verifyOtp);
 
-//admin role
-// router.post("/role" , admin)
+// =====================================================
+// USER PROFILE
+// =====================================================
 
-module.exports = router
+router.get(
+  "/profile",
+  authMiddleware,
+  getProfile
+);
+
+router.put(
+  "/editprofile",
+  authMiddleware,
+  updateProfile
+);
+
+// =====================================================
+// ADMIN USERS
+// =====================================================
+
+// GET ALL USERS
+router.get(
+  "/all",
+  authMiddleware,
+  getAllUsers
+);
+
+// GET SINGLE USER
+router.get(
+  "/single/:id",
+  authMiddleware,
+  getSingleUser
+);
+
+// DELETE USER
+router.delete(
+  "/delete/:id",
+  authMiddleware,
+  deleteUser
+);
+
+// UPDATE ROLE
+router.put(
+  "/role/:id",
+  authMiddleware,
+  updateUserRole
+);
+
+module.exports = router;

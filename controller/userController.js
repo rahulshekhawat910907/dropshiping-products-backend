@@ -1,147 +1,101 @@
-const User = require("../models/user");
+const User = require("../models/User");
 const jwt = require("jsonwebtoken");
 
 // =====================================================
 // SEND OTP
 // =====================================================
+
 const sendOtp = async (req, res) => {
   try {
-    const { phone, type, name } = req.body || {};
+    const { name, phone } = req.body;
 
-    if (!phone) {
+    if (!name || !phone) {
       return res.status(400).json({
         success: false,
-        message: "Phone number is required",
+        message: "Name and phone are required",
       });
     }
 
-    const phoneNumber = Number(phone);
+    const userName = String(name).trim();
+    const phoneNumber = String(phone).trim();
 
-    if (
-      !phoneNumber ||
-      phone.toString().length !== 10
-    ) {
+    if (!/^[6-9]\d{9}$/.test(phoneNumber)) {
       return res.status(400).json({
         success: false,
-        message: "Valid 10 digit phone number is required",
+        message: "Please enter a valid 10 digit phone number",
       });
     }
 
-    // ============================
-    // REGISTER
-    // ============================
+    let user = await User.findOne({
+      phone: phoneNumber,
+    });
 
-    if (type === "register") {
-
-      if (!name || !name.trim()) {
-        return res.status(400).json({
-          success: false,
-          message: "Name is required",
-        });
-      }
-
-      const exist = await User.findOne({
+    if (!user) {
+      user = new User({
+        name: userName,
         phone: phoneNumber,
       });
-
-      if (exist) {
-        return res.status(400).json({
-          success: false,
-          message: "Your number already exists",
-        });
-      }
-
-      const user = await User.create({
-        name: name.trim(),
-        phone: phoneNumber,
-        role: "user",
-      });
-
-      const otp = "123456";
-
-      return res.status(200).json({
-        success: true,
-        message: "OTP sent successfully",
-        otp,
-        user,
-        userId: user._id,
-      });
+    } else {
+      user.name = userName;
     }
 
-    // ============================
-    // LOGIN
-    // ============================
+    const otp = process.env.OTP || "123456";
 
-    if (type === "login") {
+    user.otp = String(otp);
 
-      const exist = await User.findOne({
-        phone: phoneNumber,
-      });
+    user.otpExpiry = new Date(
+      Date.now() + 5 * 60 * 1000
+    );
 
-      if (!exist) {
-        return res.status(404).json({
-          success: false,
-          message: "User not found. Please register first",
-        });
-      }
+    await user.save();
 
-      const otp = "123456";
-
-      return res.status(200).json({
-        success: true,
-        message: "OTP sent successfully",
-        otp,
-        user: exist,
-        userId: exist._id,
-      });
-    }
-
-    return res.status(400).json({
-      success: false,
-      message: "Request type is required",
+    return res.status(200).json({
+      success: true,
+      message: "OTP sent successfully",
     });
 
   } catch (error) {
-    console.error("Send OTP Error:", error);
+    console.error("SEND OTP ERROR:", error);
 
     return res.status(500).json({
       success: false,
-      message: error.message,
+      message: "Server error",
     });
   }
 };
 
 // =====================================================
-// VERIFY OTP & LOGIN
+// VERIFY OTP
 // =====================================================
+
 const verifyOtp = async (req, res) => {
   try {
-    const { phone, otp } = req.body || {};
+    const { phone, otp } = req.body;
 
-    console.log("VERIFY BODY:", req.body);
-
-    // =================================================
-    // VALIDATION
-    // =================================================
     if (!phone || !otp) {
       return res.status(400).json({
         success: false,
-        message: "Phone number and OTP are required",
+        message: "Phone and OTP are required",
       });
     }
 
-    const phoneNumber = Number(phone);
+    const phoneNumber = String(phone).trim();
+    const enteredOtp = String(otp).trim();
 
-    if (!phoneNumber || phone.toString().length !== 10) {
+    if (!/^[6-9]\d{9}$/.test(phoneNumber)) {
       return res.status(400).json({
         success: false,
-        message: "Valid 10 digit phone number is required",
+        message: "Invalid phone number",
       });
     }
 
-    // =================================================
-    // FIND USER BY PHONE
-    // =================================================
+    if (!/^\d{6}$/.test(enteredOtp)) {
+      return res.status(400).json({
+        success: false,
+        message: "OTP must be 6 digits",
+      });
+    }
+
     const user = await User.findOne({
       phone: phoneNumber,
     });
@@ -149,23 +103,53 @@ const verifyOtp = async (req, res) => {
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: "User not found. Please register first",
+        message: "User not found",
       });
     }
 
-    // =================================================
-    // CHECK OTP
-    // =================================================
-    if (otp.toString() !== "123456") {
+    if (!user.otp) {
+      return res.status(400).json({
+        success: false,
+        message: "OTP not found. Please request a new OTP",
+      });
+    }
+
+    if (String(user.otp) !== enteredOtp) {
       return res.status(400).json({
         success: false,
         message: "Invalid OTP",
       });
     }
 
-    // =================================================
-    // JWT TOKEN
-    // =================================================
+    if (
+      user.otpExpiry &&
+      user.otpExpiry.getTime() < Date.now()
+    ) {
+      user.otp = null;
+      user.otpExpiry = null;
+
+      await user.save();
+
+      return res.status(400).json({
+        success: false,
+        message: "OTP expired. Please request a new OTP",
+      });
+    }
+
+    user.isVerified = true;
+
+    user.otp = null;
+    user.otpExpiry = null;
+
+    await user.save();
+
+    if (!process.env.JWT_SECRET) {
+      return res.status(500).json({
+        success: false,
+        message: "JWT_SECRET is missing in .env",
+      });
+    }
+
     const token = jwt.sign(
       {
         id: user._id.toString(),
@@ -177,46 +161,24 @@ const verifyOtp = async (req, res) => {
       }
     );
 
-    // =================================================
-    // SUCCESS
-    // =================================================
     return res.status(200).json({
       success: true,
-      message: "Login Successful",
+      message: "Login successful",
       token,
-      user,
+      user: {
+        id: user._id,
+        name: user.name,
+        phone: user.phone,
+        role: user.role,
+      },
     });
 
   } catch (error) {
-    console.error("Verify OTP Error:", error);
+    console.error("VERIFY OTP ERROR:", error);
 
     return res.status(500).json({
       success: false,
-      message: error.message,
-    });
-  }
-};
-
-// =====================================================
-// GET ALL USERS
-// =====================================================
-const totalUser = async (req, res) => {
-  try {
-    const users = await User.find().sort({
-      createdAt: -1,
-    });
-
-    return res.status(200).json({
-      success: true,
-      users,
-    });
-
-  } catch (error) {
-    console.error("Get Users Error:", error);
-
-    return res.status(500).json({
-      success: false,
-      message: error.message,
+      message: "Server error",
     });
   }
 };
@@ -224,18 +186,21 @@ const totalUser = async (req, res) => {
 // =====================================================
 // GET PROFILE
 // =====================================================
-const profile = async (req, res) => {
-  try {
-    const { id } = req.params;
 
-    if (!id) {
-      return res.status(400).json({
+const getProfile = async (req, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({
         success: false,
-        message: "User ID is required",
+        message: "Unauthorized",
       });
     }
 
-    const user = await User.findById(id);
+    const userId = req.user.id || req.user._id;
+
+    const user = await User.findById(userId).select(
+      "-otp -otpExpiry"
+    );
 
     if (!user) {
       return res.status(404).json({
@@ -250,11 +215,11 @@ const profile = async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Profile Error:", error);
+    console.error("GET PROFILE ERROR:", error);
 
     return res.status(500).json({
       success: false,
-      message: error.message,
+      message: "Server error",
     });
   }
 };
@@ -262,26 +227,28 @@ const profile = async (req, res) => {
 // =====================================================
 // UPDATE PROFILE
 // =====================================================
-const updateprofile = async (req, res) => {
+
+const updateProfile = async (req, res) => {
   try {
-    const { id } = req.params;
-    const { name, phone } = req.body || {};
-
-    if (!id) {
-      return res.status(400).json({
+    if (!req.user) {
+      return res.status(401).json({
         success: false,
-        message: "User ID is required",
+        message: "Unauthorized",
       });
     }
 
-    if (!name && !phone) {
+    const { name } = req.body;
+
+    if (!name || !name.trim()) {
       return res.status(400).json({
         success: false,
-        message: "Name or phone is required",
+        message: "Name is required",
       });
     }
 
-    const user = await User.findById(id);
+    const userId = req.user.id || req.user._id;
+
+    const user = await User.findById(userId);
 
     if (!user) {
       return res.status(404).json({
@@ -290,47 +257,72 @@ const updateprofile = async (req, res) => {
       });
     }
 
-    if (name) {
-      user.name = name.trim();
-    }
-
-    if (phone) {
-      user.phone = Number(phone);
-    }
+    user.name = name.trim();
 
     await user.save();
 
     return res.status(200).json({
       success: true,
       message: "Profile updated successfully",
-      user,
+
+      user: {
+        id: user._id,
+        name: user.name,
+        phone: user.phone,
+        role: user.role,
+      },
     });
 
   } catch (error) {
-    console.error("Update Profile Error:", error);
+    console.error("UPDATE PROFILE ERROR:", error);
 
     return res.status(500).json({
       success: false,
-      message: error.message,
+      message: "Server error",
     });
   }
 };
 
 // =====================================================
-// DELETE USER
+// GET ALL USERS - ADMIN
 // =====================================================
-const deleteProfile = async (req, res) => {
+
+const getAllUsers = async (req, res) => {
   try {
+
+    const users = await User.find()
+      .select("-otp -otpExpiry")
+      .sort({ createdAt: -1 });
+
+    return res.status(200).json({
+      success: true,
+      count: users.length,
+      users,
+    });
+
+  } catch (error) {
+
+    console.error("GET ALL USERS ERROR:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+
+  }
+};
+
+// =====================================================
+// GET SINGLE USER - ADMIN
+// =====================================================
+
+const getSingleUser = async (req, res) => {
+  try {
+
     const { id } = req.params;
 
-    if (!id) {
-      return res.status(400).json({
-        success: false,
-        message: "User ID is required",
-      });
-    }
-
-    const user = await User.findById(id);
+    const user = await User.findById(id)
+      .select("-otp -otpExpiry");
 
     if (!user) {
       return res.status(404).json({
@@ -339,7 +331,40 @@ const deleteProfile = async (req, res) => {
       });
     }
 
-    await User.findByIdAndDelete(id);
+    return res.status(200).json({
+      success: true,
+      user,
+    });
+
+  } catch (error) {
+
+    console.error("GET SINGLE USER ERROR:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+
+  }
+};
+
+// =====================================================
+// DELETE USER - ADMIN
+// =====================================================
+
+const deleteUser = async (req, res) => {
+  try {
+
+    const { id } = req.params;
+
+    const user = await User.findByIdAndDelete(id);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
 
     return res.status(200).json({
       success: true,
@@ -347,23 +372,91 @@ const deleteProfile = async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Delete User Error:", error);
+
+    console.error("DELETE USER ERROR:", error);
 
     return res.status(500).json({
       success: false,
-      message: error.message,
+      message: "Server error",
     });
+
+  }
+};
+
+// =====================================================
+// UPDATE USER ROLE - ADMIN
+// =====================================================
+
+const updateUserRole = async (req, res) => {
+  try {
+
+    const { id } = req.params;
+    const { role } = req.body;
+
+    if (!role) {
+      return res.status(400).json({
+        success: false,
+        message: "Role is required",
+      });
+    }
+
+    if (!["user", "admin"].includes(role)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid role",
+      });
+    }
+
+    const user = await User.findById(id);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    user.role = role;
+
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "User role updated successfully",
+
+      user: {
+        id: user._id,
+        name: user.name,
+        phone: user.phone,
+        role: user.role,
+      },
+    });
+
+  } catch (error) {
+
+    console.error("UPDATE USER ROLE ERROR:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+
   }
 };
 
 // =====================================================
 // EXPORT
 // =====================================================
+
 module.exports = {
   sendOtp,
   verifyOtp,
-  profile,
-  updateprofile,
-  deleteProfile,
-  totalUser,
+  getProfile,
+  updateProfile,
+
+  // ADMIN
+  getAllUsers,
+  getSingleUser,
+  deleteUser,
+  updateUserRole,
 };

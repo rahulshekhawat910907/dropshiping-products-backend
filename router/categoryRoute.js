@@ -1,61 +1,61 @@
-const router = require("express").Router();
+const express = require("express");
 
 const {
   createCategory,
-  getAllCategory,
+  getCategories,
+  getAllCategories,
   getSingleCategory,
+  getCategoryBySlug,
   updateCategory,
   deleteCategory,
-} = require("../controller/categorycontroller");
+} = require("../controller/categoryController");
 
-const {
-  admin,
-  protect,
-} = require("../middleware/auth");
+const authMiddleware = require("../middleware/authMiddleware");
+const adminMiddleware = require("../middleware/adminMiddleware");
 
-// =========================
-// CREATE CATEGORY
-// =========================
+const router = express.Router();
+
+// ======================================
+// PUBLIC
+// ======================================
+
+router.get("/", getCategories);
+
+router.get("/all", getCategories);
+
+router.get("/slug/:slug", getCategoryBySlug);
+
+router.get("/:id", getSingleCategory);
+
+// ======================================
+// ADMIN
+// ======================================
+
+router.get(
+  "/admin/all",
+  authMiddleware,
+  adminMiddleware,
+  getAllCategories
+);
+
 router.post(
   "/create",
-  protect,
-  admin,
+  authMiddleware,
+  adminMiddleware,
   createCategory
 );
 
-// =========================
-// GET ALL CATEGORY
-// =========================
-router.get(
-  "/all",
-  getAllCategory
-);
-
-// =========================
-// GET SINGLE CATEGORY
-// =========================
-router.get(
-  "/single/:id",
-  getSingleCategory
-);
-
-// =========================
-// UPDATE CATEGORY
-// =========================
 router.put(
   "/update/:id",
-  protect,
-  admin,
+  authMiddleware,
+  adminMiddleware,
   updateCategory
 );
 
-// =========================
-// DELETE CATEGORY
-// =========================
 router.delete(
   "/delete/:id",
-  protect,
-  admin,
+  authMiddleware,
+  adminMiddleware,
   deleteCategory
 );
 

@@ -3,8 +3,7 @@ require("dotenv").config();
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
-const DNS = require("dns")
-DNS.setServers(['1.1.1.1', '8.8.8.8'])
+const path = require("path");
 
 
 const app = express();
@@ -12,13 +11,15 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const PORT = process.env.PORT || 3000;
+app.use(
+  "/uploads",
+  express.static(
+    path.join(__dirname, "uploads")
+  )
+);
 
-
-mongoose
-  .connect(process.env.MONGO_URI)
-  .then(() => console.log("Connected to MongoDB"))
-  .catch((error) => console.error("Error connecting to MongoDB:", error.message));
+const PORT = process.env.PORT || 2000;
+const mongoUri = process.env.MONGO_URI;
 
 
   //router
@@ -44,12 +45,91 @@ const cartRoute = require("./router/cartRoute")
 app.use("/api/cart" , cartRoute)
 
 
-//admin deshboard
-const adminRouter = require("./router/adminRouter");
+//admin 
+const adminRouter = require("./router/adminRoute");
 app.use("/api/admin", adminRouter);
 
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+//admin deshboard
+const admindeshboard = require("./router/admindeshboardRouter")
+app.use("/api/admin", admindeshboard);
+
+//image uploader
+const uploadRoutes =
+  require("./router/uploadRoute");
+
+app.use(
+  "/api/upload",
+  uploadRoutes
+);
+
+app.use((error, req, res, next) => {
+  console.error("REQUEST ERROR:", error);
+
+  if (res.headersSent) {
+    return next(error);
+  }
+
+  return res.status(500).json({
+    success: false,
+    message: error.message || "Image upload failed",
+  });
+});
+//navbar 
+const navbarRouter = require("./router/navbarRouter")
+app.use("/api/navbar" , navbarRouter)
+
+//sitesetting
+const siteSettingsRoutes = require("./router/siteSettingsRouter");
+app.use("/api/settings", siteSettingsRoutes);
+
+//footer
+const footerRoutes = require("./router/footerRoute");
+app.use("/api/footer", footerRoutes);
+
+//menu
+const menuRoutes = require("./router/menuRoute");
+app.use("/api/menu", menuRoutes);
+
+//banner
+const bannerRoutes = require("./router/bannerRoute");
+app.use("/api/banner", bannerRoutes);
+
+//whatsapp
+const whatsappRoutes  = require("./router/whatsappRoute");
+app.use("/api/whatsapp",whatsappRoutes);
+
+//address
+const addressRoutes = require("./router/addressRoute");
+app.use("/api/address",addressRoutes);
+
+//dropshipping
+const supplierRoutes =
+  require("./router/supplierRoute");
+
+app.use(
+  "/api/supplier",
+  supplierRoutes
+);
+
+const startServer = async () => {
+  if (!mongoUri) {
+    throw new Error("MONGO_URI is not configured.");
+  }
+
+  await mongoose.connect(mongoUri, {
+    serverSelectionTimeoutMS: 5000,
+  });
+
+  console.log("Connected to MongoDB");
+  app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+  });
+};
+
+startServer().catch((error) => {
+  console.error("MongoDB connection failed. Check MONGO_URI or start a local MongoDB instance.");
+  console.error(error.message);
+  process.exitCode = 1;
 });
 
 

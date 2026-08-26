@@ -1,23 +1,70 @@
 const express = require("express");
+
 const router = express.Router();
 
 const {
-  addToCart,
   getCart,
-  updateCartItem,
-  removeCartItem,
+  addToCart,
+  updateCart,
+  removeFromCart,
   clearCart,
-} = require("../controller/cartcontroller");
+} = require("../controller/cartController");
 
-const { protect } = require("../middleware/auth");
+const authMiddleware = require("../middleware/authMiddleware");
 
+// =====================================================
+// GET CART
+// GET /api/cart
+// =====================================================
 
-router.post("/create",protect, addToCart);
-router.get("/all",protect,  getCart);
-router.put("/update/:productId",protect, updateCartItem);
-router.delete("/remove/:productId",protect, removeCartItem);
+router.get(
+  "/",
+  authMiddleware,
+  getCart
+);
 
+// =====================================================
+// ADD TO CART
+// POST /api/cart/add
+// =====================================================
 
-router.delete("/clear",protect , clearCart);
+router.post(
+  "/add",
+  authMiddleware,
+  addToCart
+);
+
+// =====================================================
+// UPDATE CART
+// PUT /api/cart/update/:productId
+// =====================================================
+
+router.put(
+  "/update/:productId",
+  authMiddleware,
+  updateCart
+);
+
+// =====================================================
+// REMOVE
+// DELETE /api/cart/remove/:productId
+// =====================================================
+
+router.delete(
+  "/remove/:productId",
+  authMiddleware,
+  removeFromCart
+);
+
+// =====================================================
+// CLEAR
+// DELETE /api/cart/clear
+// =====================================================
+
+router.delete(
+  "/clear",
+  authMiddleware,
+  clearCart
+);
 
 module.exports = router;

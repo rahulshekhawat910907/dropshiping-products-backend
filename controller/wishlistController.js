@@ -2,22 +2,50 @@ const Wishlist = require("../models/wishlist");
 const Product = require("../models/product");
 
 // ======================================
-// ADD PRODUCT TO WISHLIST
+// GET WISHLIST
 // ======================================
-const AddToWishlist = async (req, res) => {
+
+const getWishlist = async (req, res) => {
   try {
-    // User protect middleware se milega
     const userId = req.user?._id || req.user?.id;
 
-    // Product frontend se aayega
-    const { productId } = req.body;
+    let wishlist = await Wishlist.findOne({
+      user: userId,
+    }).populate({
+      path: "products",
+      select:
+        "name slug image images price salePrice stock category brand",
+    });
 
-    if (!userId) {
-      return res.status(401).json({
-        success: false,
-        message: "User not authenticated",
+    if (!wishlist) {
+      wishlist = await Wishlist.create({
+        user: userId,
+        products: [],
       });
     }
+
+    res.json({
+      success: true,
+      wishlist,
+    });
+  } catch (error) {
+    console.log(error);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to get wishlist",
+    });
+  }
+};
+
+// ======================================
+// ADD TO WISHLIST
+// ======================================
+
+const addToWishlist = async (req, res) => {
+  try {
+    const { productId } = req.body;
+    const userId = req.user?._id || req.user?.id;
 
     if (!productId) {
       return res.status(400).json({
@@ -26,7 +54,6 @@ const AddToWishlist = async (req, res) => {
       });
     }
 
-    // Check product
     const product = await Product.findById(productId);
 
     if (!product) {
@@ -36,35 +63,22 @@ const AddToWishlist = async (req, res) => {
       });
     }
 
-    // Find user's wishlist
     let wishlist = await Wishlist.findOne({
       user: userId,
     });
 
-    // If wishlist doesn't exist
     if (!wishlist) {
       wishlist = await Wishlist.create({
         user: userId,
-        products: [productId],
-      });
-
-      const populatedWishlist =
-        await Wishlist.findById(wishlist._id).populate(
-          "products"
-        );
-
-      return res.status(201).json({
-        success: true,
-        message: "Product added to wishlist",
-        wishlist: populatedWishlist,
+        products: [],
       });
     }
 
-    // Check if product already exists
-    const alreadyExists = wishlist.products.some(
-      (item) =>
-        item.toString() === productId.toString()
-    );
+    const alreadyExists =
+      wishlist.products.some(
+        (id) =>
+          id.toString() === productId
+      );
 
     if (alreadyExists) {
       return res.status(400).json({
@@ -73,101 +87,40 @@ const AddToWishlist = async (req, res) => {
       });
     }
 
-    // Add product
     wishlist.products.push(productId);
 
     await wishlist.save();
 
-    const updatedWishlist =
-      await Wishlist.findById(wishlist._id).populate(
-        "products"
-      );
+    await wishlist.populate({
+      path: "products",
+      select:
+        "name slug image images price salePrice stock category brand",
+    });
 
-    return res.status(200).json({
+    res.json({
       success: true,
       message: "Product added to wishlist",
-      wishlist: updatedWishlist,
+      wishlist,
     });
   } catch (error) {
-    console.error("Add Wishlist Error:", error);
+    console.log(error);
 
-    return res.status(500).json({
+    res.status(500).json({
       success: false,
-      message: error.message,
+      message: "Failed to add product to wishlist",
     });
   }
 };
 
-
 // ======================================
-// GET USER WISHLIST
+// REMOVE FROM WISHLIST
 // ======================================
-const getWishlist = async (req, res) => {
-  try {
-    const userId = req.user?._id || req.user?.id;
 
-    if (!userId) {
-      return res.status(401).json({
-        success: false,
-        message: "User not authenticated",
-      });
-    }
-
-    const wishlist = await Wishlist.findOne({
-      user: userId,
-    }).populate("products");
-
-    // Wishlist doesn't exist
-    if (!wishlist) {
-      return res.status(200).json({
-        success: true,
-        count: 0,
-        wishlist: [],
-        products: [],
-      });
-    }
-
-    return res.status(200).json({
-      success: true,
-      count: wishlist.products.length,
-      wishlist: wishlist,
-      products: wishlist.products,
-    });
-  } catch (error) {
-    console.error("Get Wishlist Error:", error);
-
-    return res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
-};
-
-
-// ======================================
-// REMOVE PRODUCT FROM WISHLIST
-// ======================================
 const removeFromWishlist = async (req, res) => {
   try {
+    const { productId } = req.params;
     const userId = req.user?._id || req.user?.id;
 
-    const { productId } = req.params;
-
-    if (!userId) {
-      return res.status(401).json({
-        success: false,
-        message: "User not authenticated",
-      });
-    }
-
-    if (!productId) {
-      return res.status(400).json({
-        success: false,
-        message: "Product ID is required",
-      });
-    }
-
-    // Find user's wishlist
     const wishlist = await Wishlist.findOne({
       user: userId,
     });
@@ -179,51 +132,76 @@ const removeFromWishlist = async (req, res) => {
       });
     }
 
-    // Check product
-    const exists = wishlist.products.some(
-      (item) =>
-        item.toString() === productId.toString()
-    );
-
-    if (!exists) {
-      return res.status(404).json({
-        success: false,
-        message: "Product not found in wishlist",
-      });
-    }
-
-    // Remove product
-    wishlist.products = wishlist.products.filter(
-      (item) =>
-        item.toString() !== productId.toString()
-    );
+    wishlist.products =
+      wishlist.products.filter(
+        (id) =>
+          id.toString() !== productId
+      );
 
     await wishlist.save();
 
-    const updatedWishlist =
-      await Wishlist.findById(wishlist._id).populate(
-        "products"
-      );
+    await wishlist.populate({
+      path: "products",
+      select:
+        "name slug image images price salePrice stock category brand",
+    });
 
-    return res.status(200).json({
+    res.json({
       success: true,
       message: "Product removed from wishlist",
-      wishlist: updatedWishlist,
-      products: updatedWishlist.products,
+      wishlist,
     });
   } catch (error) {
-    console.error("Remove Wishlist Error:", error);
+    console.log(error);
 
-    return res.status(500).json({
+    res.status(500).json({
       success: false,
-      message: error.message,
+      message:
+        "Failed to remove product from wishlist",
     });
   }
 };
 
+// ======================================
+// CLEAR WISHLIST
+// ======================================
+
+const clearWishlist = async (req, res) => {
+  try {
+    const userId = req.user?._id || req.user?.id;
+    const wishlist = await Wishlist.findOne({
+      user: userId,
+    });
+
+    if (!wishlist) {
+      return res.json({
+        success: true,
+        message: "Wishlist already empty",
+      });
+    }
+
+    wishlist.products = [];
+
+    await wishlist.save();
+
+    res.json({
+      success: true,
+      message: "Wishlist cleared successfully",
+      wishlist,
+    });
+  } catch (error) {
+    console.log(error);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to clear wishlist",
+    });
+  }
+};
 
 module.exports = {
-  AddToWishlist,
   getWishlist,
+  addToWishlist,
   removeFromWishlist,
+  clearWishlist,
 };

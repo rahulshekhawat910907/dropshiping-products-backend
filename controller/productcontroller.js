@@ -907,15 +907,24 @@ const createMultipleProducts =
 
 const submitProduct = async (req, res) => {
   try {
+    const filePath = req.file?.path;
     const uploadedImage = req.file
-      ? req.file.path.startsWith("http")
-        ? req.file.path
+      ? typeof filePath === "string" && filePath.startsWith("http")
+        ? filePath
         : `${req.protocol}://${req.get("host")}/uploads/products/${req.file.filename}`
       : "";
 
+    const bodyImage =
+      typeof req.body?.image === "string"
+        ? req.body.image
+        : req.body?.image?.url ||
+          req.body?.image?.secure_url ||
+          req.body?.image?.path ||
+          "";
+
     const data = {
       ...(req.body || {}),
-      image: uploadedImage || req.body.image || "",
+      image: uploadedImage || bodyImage,
     };
 
     if (!data.image) {

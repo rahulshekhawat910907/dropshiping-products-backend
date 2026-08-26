@@ -1,4 +1,5 @@
 const Footer = require("../models/Footer");
+const Setting = require("../models/SiteSettings");
 
 // ==========================================
 // GET FOOTER
@@ -82,6 +83,11 @@ const updateFooter = async (req, res) => {
     footer.copyright = copyright ?? footer.copyright;
 
     await footer.save();
+
+    let settings = await Setting.findOne();
+    if (!settings) settings = new Setting();
+    settings.siteName = footer.companyName;
+    await settings.save();
 
     res.status(200).json({
       success: true,

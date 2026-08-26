@@ -2,6 +2,8 @@ const express = require("express");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
+const { CloudinaryStorage } = require("multer-storage-cloudinary");
+const cloudinary = require("../config/Cloudnary");
 
 const {
   getSettings,
@@ -53,6 +55,22 @@ const storage = multer.diskStorage({
   },
 });
 
+const cloudinaryConfig = [
+  process.env.CLOUDINARY_CLOUD_NAME,
+  process.env.CLOUDINARY_API_KEY,
+  process.env.CLOUDINARY_API_SECRET,
+].map((value) => value?.trim());
+
+const logoStorage = cloudinaryConfig.every(Boolean) && !cloudinaryConfig.includes("rahulsingh")
+  ? new CloudinaryStorage({
+      cloudinary,
+      params: {
+        folder: "ecommerce/logo",
+        allowed_formats: ["jpg", "jpeg", "png", "webp", "svg"],
+      },
+    })
+  : storage;
+
 // =====================================================
 // FILE FILTER
 // =====================================================
@@ -79,7 +97,7 @@ const fileFilter = (req, file, cb) => {
 };
 
 const upload = multer({
-  storage,
+  storage: logoStorage,
   fileFilter,
 
   limits: {

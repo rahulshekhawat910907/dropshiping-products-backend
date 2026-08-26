@@ -1,4 +1,5 @@
 const Setting = require("../models/SiteSettings");
+const Footer = require("../models/Footer");
 const fs = require("fs");
 const path = require("path");
 
@@ -57,6 +58,12 @@ const updateSiteName = async (req, res) => {
     settings.siteName = siteName.trim();
 
     await settings.save();
+
+    const footer = await Footer.findOne();
+    if (footer) {
+      footer.companyName = settings.siteName;
+      await footer.save();
+    }
 
     res.status(200).json({
       success: true,
@@ -146,7 +153,15 @@ const uploadLogo = async (req, res) => {
     // SAVE NEW LOGO URL
     // =================================================
 
-    const logoUrl = `/uploads/logo/${req.file.filename}`;
+    let logoUrl = req.file.path?.startsWith("http")
+      ? req.file.path
+      : `/uploads/logo/${req.file.filename}`;
+
+    if (!req.file.path?.startsWith("http")) {
+      const fileContents = fs.readFileSync(req.file.path);
+      logoUrl = `data:${req.file.mimetype};base64,${fileContents.toString("base64")}`;
+      fs.unlinkSync(req.file.path);
+    }
 
     settings.logo = logoUrl;
 

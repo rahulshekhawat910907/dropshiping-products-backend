@@ -1,7 +1,7 @@
 const User = require("../models/User");
 const Address = require("../models/Address");
 const Cart = require("../models/cart");
-const Wishlist = require("../models/Wishlist");
+const Wishlist = require("../models/wishlist");
 const mongoose = require("mongoose");
 
 // =====================================================

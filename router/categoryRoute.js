@@ -8,7 +8,7 @@ const {
   getCategoryBySlug,
   updateCategory,
   deleteCategory,
-} = require("../controller/categoryController");
+} = require("../controller/categorycontroller");
 
 const authMiddleware = require("../middleware/authMiddleware");
 const adminMiddleware = require("../middleware/adminMiddleware");

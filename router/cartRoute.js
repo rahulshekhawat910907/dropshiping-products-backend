@@ -8,7 +8,7 @@ const {
   updateCart,
   removeFromCart,
   clearCart,
-} = require("../controller/cartController");
+} = require("../controller/cartcontroller");
 
 const authMiddleware = require("../middleware/authMiddleware");
 

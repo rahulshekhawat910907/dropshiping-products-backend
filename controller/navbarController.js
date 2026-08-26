@@ -1,5 +1,5 @@
 const mongoose = require("mongoose");
-const Navbar = require("../models/Navbar");
+const Navbar = require("../models/navbar");
 
 // =====================================================
 // GET ACTIVE NAVBAR - PUBLIC

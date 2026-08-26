@@ -14,7 +14,7 @@ const {
   deleteProduct,
   toggleProductStatus,
   getDropshippingProducts,
-} = require("../controller/productController");
+} = require("../controller/productcontroller");
 
 const authMiddleware = require("../middleware/authMiddleware");
 const adminMiddleware = require("../middleware/adminMiddleware");

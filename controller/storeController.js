@@ -14,7 +14,15 @@ const createStore = async (req, res) => {
     const { username, storeName, storeSlug } = req.body;
     const slug = slugify(storeSlug);
     if (!username?.trim() || !storeName?.trim() || !slug) return res.status(400).json({ success: false, message: "Username, store name and store slug are required" });
-    if (await findOwnStore(req)) return res.status(409).json({ success: false, code: "STORE_EXISTS", message: "You already have a store" });
+    const ownStore = await findOwnStore(req);
+    if (ownStore) {
+      return res.status(200).json({
+        success: true,
+        existing: true,
+        message: "Your store already exists",
+        store: ownStore,
+      });
+    }
     if (await Store.exists({ storeSlug: slug })) return res.status(409).json({ success: false, code: "SLUG_TAKEN", message: "Store slug is already in use" });
     const store = await Store.create({ user: userId(req), username: username.trim(), storeName: storeName.trim(), storeSlug: slug, storeUrl: `${frontendUrl()}/store/${slug}` });
     return res.status(201).json({ success: true, store });

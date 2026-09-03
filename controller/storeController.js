@@ -14,12 +14,12 @@ const createStore = async (req, res) => {
     const { username, storeName, storeSlug } = req.body;
     const slug = slugify(storeSlug);
     if (!username?.trim() || !storeName?.trim() || !slug) return res.status(400).json({ success: false, message: "Username, store name and store slug are required" });
-    if (await findOwnStore(req)) return res.status(409).json({ success: false, message: "You already have a store" });
-    if (await Store.exists({ storeSlug: slug })) return res.status(409).json({ success: false, message: "Store slug is already in use" });
+    if (await findOwnStore(req)) return res.status(409).json({ success: false, code: "STORE_EXISTS", message: "You already have a store" });
+    if (await Store.exists({ storeSlug: slug })) return res.status(409).json({ success: false, code: "SLUG_TAKEN", message: "Store slug is already in use" });
     const store = await Store.create({ user: userId(req), username: username.trim(), storeName: storeName.trim(), storeSlug: slug, storeUrl: `${frontendUrl()}/store/${slug}` });
     return res.status(201).json({ success: true, store });
   } catch (error) {
-    if (error.code === 11000) return res.status(409).json({ success: false, message: "Store slug is already in use" });
+    if (error.code === 11000) return res.status(409).json({ success: false, code: "SLUG_TAKEN", message: "Store slug is already in use" });
     console.error("CREATE STORE ERROR:", error);
     return res.status(500).json({ success: false, message: "Unable to create store" });
   }

@@ -19,7 +19,11 @@ const createStore = async (req, res) => {
     const store = await Store.create({ user: userId(req), username: username.trim(), storeName: storeName.trim(), storeSlug: slug, storeUrl: `${frontendUrl()}/store/${slug}` });
     return res.status(201).json({ success: true, store });
   } catch (error) {
-    if (error.code === 11000) return res.status(409).json({ success: false, code: "SLUG_TAKEN", message: "Store slug is already in use" });
+    if (error.code === 11000) {
+      const ownStore = await findOwnStore(req);
+      if (ownStore) return res.status(409).json({ success: false, code: "STORE_EXISTS", message: "You already have a store" });
+      return res.status(409).json({ success: false, code: "SLUG_TAKEN", message: "Store slug is already in use" });
+    }
     console.error("CREATE STORE ERROR:", error);
     return res.status(500).json({ success: false, message: "Unable to create store" });
   }
@@ -76,6 +80,12 @@ const publicStore = async (req, res) => {
   return res.json({ success: true, store });
 };
 
+const publicTheme = async (req, res) => {
+  const store = await Store.findOne({ storeSlug: slugify(req.params.slug), status: "active" }).select("theme");
+  if (!store) return res.status(404).json({ success: false, message: "Store not found" });
+  return res.json({ success: true, theme: store.theme });
+};
+
 const publicProducts = async (req, res) => {
   const store = await Store.findOne({ storeSlug: slugify(req.params.slug), status: "active" }).select("_id");
   if (!store) return res.status(404).json({ success: false, message: "Store not found" });
@@ -100,4 +110,4 @@ const addProduct = async (req, res) => {
 const ownProducts = async (req, res) => { const store = await findOwnStore(req); if (!store) return res.json({ success: true, products: [] }); const products = await StoreProduct.find({ store: store._id }).populate("product", "name price salePrice image stock").sort({ createdAt: -1 }); return res.json({ success: true, products }); };
 const ownProduct = async (req, res) => { const store = await findOwnStore(req); if (!store || !mongoose.Types.ObjectId.isValid(req.params.productId)) return res.status(404).json({ success: false, message: "Store product not found" }); const row = await StoreProduct.findOne({ _id: req.params.productId, store: store._id }); if (!row) return res.status(404).json({ success: false, message: "Store product not found" }); if (req.method === "DELETE") { await row.deleteOne(); return res.json({ success: true, message: "Product removed" }); } if (req.body.sellingPrice !== undefined) { const price = Number(req.body.sellingPrice); if (!Number.isFinite(price) || price < 0) return res.status(400).json({ success: false, message: "Invalid selling price" }); row.sellingPrice = price; } if (req.body.status !== undefined) row.status = Boolean(req.body.status); await row.save(); return res.json({ success: true, product: row }); };
 
-module.exports = { createStore, getMyStore, updateStore, updateTheme, updateMedia, checkSlug, publicStore, publicProducts, addProduct, ownProducts, ownProduct };
+module.exports = { createStore, getMyStore, updateStore, updateTheme, updateMedia, checkSlug, publicStore, publicTheme, publicProducts, addProduct, ownProducts, ownProduct };

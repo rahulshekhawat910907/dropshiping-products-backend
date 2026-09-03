@@ -1,5 +1,8 @@
 const mongoose = require("mongoose");
 const Cart = require("../models/cart");
+const Product = require("../models/product");
+const Store = require("../models/Store");
+const StoreProduct = require("../models/StoreProduct");
 
 // =====================================================
 // GET CART
@@ -118,7 +121,8 @@ const addToCart = async (req, res) => {
       req.user.userId;
 
     const { productId, storeSlug } = req.body;
-    const unitPrice = req.body.unitPrice === undefined ? null : Number(req.body.unitPrice);
+    let normalizedStoreSlug = storeSlug ? String(storeSlug).trim().toLowerCase() : "";
+    let unitPrice = null;
 
     const quantity = Number(req.body.quantity || 1);
 
@@ -157,8 +161,16 @@ const addToCart = async (req, res) => {
       });
     }
 
-    if (unitPrice !== null && (!Number.isFinite(unitPrice) || unitPrice < 0)) {
-      return res.status(400).json({ success: false, message: "Invalid unit price" });
+    const product = await Product.findOne({ _id: productId, isActive: true, approvalStatus: "approved" }).select("price stock");
+    if (!product) return res.status(404).json({ success: false, message: "Product not found" });
+    if (product.stock < quantity) return res.status(400).json({ success: false, message: "Not enough stock" });
+
+    if (normalizedStoreSlug) {
+      const store = await Store.findOne({ storeSlug: normalizedStoreSlug, status: "active" }).select("_id");
+      if (!store) return res.status(404).json({ success: false, message: "Store not found" });
+      const storeProduct = await StoreProduct.findOne({ store: store._id, product: productId, status: true }).select("sellingPrice");
+      if (!storeProduct) return res.status(404).json({ success: false, message: "Product is not available in this store" });
+      unitPrice = storeProduct.sellingPrice;
     }
 
     let cart = await Cart.findOne({
@@ -175,18 +187,19 @@ const addToCart = async (req, res) => {
     const existingItem = cart.items.find(
       (item) =>
         item.product.toString() ===
-        productId.toString()
+        productId.toString() &&
+        String(item.storeSlug || "") === normalizedStoreSlug
     );
 
     if (existingItem) {
       existingItem.quantity += quantity;
       if (unitPrice !== null) existingItem.unitPrice = unitPrice;
-      if (storeSlug) existingItem.storeSlug = String(storeSlug).trim().toLowerCase();
+      existingItem.storeSlug = normalizedStoreSlug;
     } else {
       cart.items.push({
         product: productId,
         quantity,
-        storeSlug: storeSlug ? String(storeSlug).trim().toLowerCase() : "",
+        storeSlug: normalizedStoreSlug,
         unitPrice,
       });
     }

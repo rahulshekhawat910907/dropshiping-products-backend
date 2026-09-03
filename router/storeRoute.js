@@ -4,7 +4,7 @@ const controller = require("../controller/storeController");
 const router = express.Router();
 
 router.get("/:slug/products", controller.publicProducts);
-router.get("/:slug/theme", controller.publicStore);
+router.get("/:slug/theme", controller.publicTheme);
 router.get("/:slug", controller.publicStore);
 
 module.exports = router;

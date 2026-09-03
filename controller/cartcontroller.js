@@ -117,7 +117,8 @@ const addToCart = async (req, res) => {
       req.user.id ||
       req.user.userId;
 
-    const { productId } = req.body;
+    const { productId, storeSlug } = req.body;
+    const unitPrice = req.body.unitPrice === undefined ? null : Number(req.body.unitPrice);
 
     const quantity = Number(req.body.quantity || 1);
 
@@ -156,6 +157,10 @@ const addToCart = async (req, res) => {
       });
     }
 
+    if (unitPrice !== null && (!Number.isFinite(unitPrice) || unitPrice < 0)) {
+      return res.status(400).json({ success: false, message: "Invalid unit price" });
+    }
+
     let cart = await Cart.findOne({
       user: userId,
     });
@@ -175,10 +180,14 @@ const addToCart = async (req, res) => {
 
     if (existingItem) {
       existingItem.quantity += quantity;
+      if (unitPrice !== null) existingItem.unitPrice = unitPrice;
+      if (storeSlug) existingItem.storeSlug = String(storeSlug).trim().toLowerCase();
     } else {
       cart.items.push({
         product: productId,
         quantity,
+        storeSlug: storeSlug ? String(storeSlug).trim().toLowerCase() : "",
+        unitPrice,
       });
     }
 

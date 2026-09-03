@@ -5,6 +5,9 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 const path = require("path");
 
+const DNS = require("dns");
+DNS.setServers(["1.1.1.1" , "8.8.8.8"]);
+
 
 const app = express();
 app.set("trust proxy", 1);
@@ -120,6 +123,12 @@ app.use("/api/banner", bannerRoutes);
 //whatsapp
 const whatsappRoutes  = require("./router/whatsappRoute");
 app.use("/api/whatsapp",whatsappRoutes);
+
+const storeRoutes = require("./router/storeRoute");
+app.use("/api/store", storeRoutes);
+
+const dropshipperRoutes = require("./router/dropshipperRoute");
+app.use("/api/dropshippers", dropshipperRoutes);
 
 //address
 const addressRoutes = require("./router/addressRoute");

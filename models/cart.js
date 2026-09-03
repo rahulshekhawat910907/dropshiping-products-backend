@@ -13,6 +13,9 @@ const cartItemSchema = new mongoose.Schema(
       default: 1,
       min: 1,
     },
+
+    storeSlug: { type: String, default: "", trim: true },
+    unitPrice: { type: Number, min: 0, default: null },
   },
   {
     _id: true,

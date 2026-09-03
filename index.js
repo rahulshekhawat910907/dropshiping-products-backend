@@ -4,6 +4,7 @@ const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const path = require("path");
+const Store = require("./models/Store");
 
 const DNS = require("dns");
 DNS.setServers(["1.1.1.1" , "8.8.8.8"]);
@@ -151,6 +152,17 @@ const startServer = async () => {
   await mongoose.connect(mongoUri, {
     serverSelectionTimeoutMS: 5000,
   });
+
+  for (const indexName of ["owner_1", "subdomain_1"]) {
+    try {
+      await Store.collection.dropIndex(indexName);
+      console.log(`Removed obsolete stores index: ${indexName}`);
+    } catch (error) {
+      if (error.codeName !== "IndexNotFound" && error.code !== 27) {
+        throw error;
+      }
+    }
+  }
 
   console.log("Connected to MongoDB");
   app.listen(PORT, () => {

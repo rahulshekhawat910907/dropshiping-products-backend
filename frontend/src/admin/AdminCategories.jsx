@@ -26,6 +26,7 @@ const INITIAL_FORM = {
   description: "",
   image: "",
   active: true,
+  commissionPercent: "",
 };
 
 const CATEGORIES_PER_PAGE = 8;
@@ -200,6 +201,9 @@ function AdminCategories() {
 
       image: category?.image || "",
 
+      commissionPercent:
+        category?.commissionPercent ?? "",
+
       active:
         category?.active !== false,
     });
@@ -254,6 +258,15 @@ function AdminCategories() {
       return;
     }
 
+    if (
+      (form.commissionPercent !== "" && Number(form.commissionPercent) < 0) ||
+      Number(form.commissionPercent) > 100 ||
+      (form.commissionPercent !== "" && Number.isNaN(Number(form.commissionPercent)))
+    ) {
+      toast.error("Commission must be between 0 and 100 percent");
+      return;
+    }
+
     try {
       setSaving(true);
 
@@ -263,6 +276,9 @@ function AdminCategories() {
         description,
         image,
         active: Boolean(form.active),
+        commissionPercent: form.commissionPercent === ""
+          ? null
+          : Number(form.commissionPercent),
       };
 
       console.log(
@@ -1313,6 +1329,26 @@ function AdminCategories() {
                 </div>
 
                 
+
+                <div className="md:col-span-2">
+
+                  <label className="block text-xs font-bold text-gray-700 mb-2">
+                    Dropshipper Commission % (default 5%)
+                  </label>
+
+                  <input
+                    type="number"
+                    name="commissionPercent"
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    value={form.commissionPercent}
+                    onChange={handleChange}
+                    placeholder="5"
+                    className="w-full h-11 px-4 rounded-xl border border-gray-200 bg-gray-50 outline-none focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 text-sm"
+                  />
+
+                </div>
 
                 <div className="md:col-span-2">
 

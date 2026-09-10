@@ -44,7 +44,7 @@ const getImageUrl = (image) => {
 
   const baseUrl =
     import.meta.env.VITE_API_URL ||
-    "https://e-commerce-project-with-dropshiping-1.onrender.com/api";
+    "https://dropshiping-products-backend-5.onrender.com/api";
 
   return `${baseUrl.replace(/\/api\/?$/, "")}/${String(
     image
@@ -179,11 +179,16 @@ function ProductCard({ product, hideStoreAction = false }) {
       }
     };
 
+    const handleWishlistUpdated = (event) => {
+      if (String(event.detail?.productId) !== String(productId)) return;
+      setIsWishlisted(Boolean(event.detail.isWishlisted));
+    };
+
     loadWishlistStatus();
-    window.addEventListener("wishlist-updated", loadWishlistStatus);
+    window.addEventListener("wishlist-updated", handleWishlistUpdated);
 
     return () => {
-      window.removeEventListener("wishlist-updated", loadWishlistStatus);
+      window.removeEventListener("wishlist-updated", handleWishlistUpdated);
     };
   }, [productId]);
 
@@ -364,7 +369,9 @@ function ProductCard({ product, hideStoreAction = false }) {
         await api.delete(`/wishlist/remove/${productId}`);
 
         setIsWishlisted(false);
-        window.dispatchEvent(new Event("wishlist-updated"));
+        window.dispatchEvent(new CustomEvent("wishlist-updated", {
+          detail: { productId, isWishlisted: false },
+        }));
 
         toast.success(
           "Removed from wishlist"
@@ -375,7 +382,9 @@ function ProductCard({ product, hideStoreAction = false }) {
         });
 
         setIsWishlisted(true);
-        window.dispatchEvent(new Event("wishlist-updated"));
+        window.dispatchEvent(new CustomEvent("wishlist-updated", {
+          detail: { productId, isWishlisted: true },
+        }));
 
         toast.success(
           "Added to wishlist"
@@ -422,7 +431,7 @@ function ProductCard({ product, hideStoreAction = false }) {
       product?.salePrice || product?.price || 0
     );
     const commissionPercent = Math.min(
-      Math.max(Number(product?.commissionPercent ?? 5), 0),
+      Math.max(Number(product?.category?.commissionPercent ?? product?.commissionPercent ?? 5), 0),
       100
     );
     const minimumPrice = Number(

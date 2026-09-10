@@ -47,7 +47,7 @@ const getImageUrl = (image) => {
   }
 
   const baseUrl = (
-    import.meta.env.VITE_API_URL || "https://e-commerce-project-with-dropshiping-1.onrender.com/api"
+    import.meta.env.VITE_API_URL || "https://dropshiping-products-backend-5.onrender.com/api"
   ).replace(/\/api\/?$/, "");
 
   return `${baseUrl}/${value.replace(/^\/+/, "")}`;
@@ -512,7 +512,7 @@ function Products() {
     const productId = getProductId(product);
     const basePrice = Number(product?.salePrice || product?.price || 0);
     const commissionPercent = Math.min(
-      Math.max(Number(product?.commissionPercent ?? 5), 0),
+      Math.max(Number(product?.category?.commissionPercent ?? product?.commissionPercent ?? 5), 0),
       100
     );
     const minimumPrice = Number(
@@ -578,6 +578,10 @@ function Products() {
           )
         );
 
+        window.dispatchEvent(new CustomEvent("wishlist-updated", {
+          detail: { productId: id, isWishlisted: false },
+        }));
+
         toast.success("Removed from wishlist");
       } else {
         await api.post("/wishlist/add", {
@@ -588,6 +592,10 @@ function Products() {
           ...prev,
           id,
         ]);
+
+        window.dispatchEvent(new CustomEvent("wishlist-updated", {
+          detail: { productId: id, isWishlisted: true },
+        }));
 
         toast.success("Added to wishlist");
       }

@@ -45,7 +45,7 @@ function AdminProducts() {
     supplierProductId: "",
     supplierUrl: "",
     supplierPrice: "",
-    commissionPercent: "5",
+    commissionPercent: "",
   };
 
 
@@ -464,10 +464,6 @@ function AdminProducts() {
       }
     }
 
-    if (form.commissionPercent === "") {
-      setForm((previous) => ({ ...previous, commissionPercent: "5" }));
-    }
-
     if (form.commissionPercent !== "" && (Number(form.commissionPercent) < 0 || Number(form.commissionPercent) > 100 || Number.isNaN(Number(form.commissionPercent)))) {
       toast.error("Commission must be between 0 and 100 percent");
       return false;
@@ -562,7 +558,7 @@ function AdminProducts() {
           form.dropshipping ? Number(form.supplierPrice) : 0,
 
         commissionPercent: form.commissionPercent === ""
-          ? 5
+          ? undefined
           : Number(form.commissionPercent),
 
         tags: [],

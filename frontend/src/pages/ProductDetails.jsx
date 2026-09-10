@@ -48,7 +48,7 @@ const getImageUrl = (image) => {
 
   const apiUrl =
     import.meta.env.VITE_API_URL ||
-    "https://e-commerce-project-with-dropshiping-1.onrender.com/api";
+    "https://dropshiping-products-backend-5.onrender.com/api";
 
   const baseUrl = apiUrl.replace(/\/api\/?$/, "");
 
@@ -272,6 +272,9 @@ function ProductDetails() {
         );
 
         setInWishlist(false);
+        window.dispatchEvent(new CustomEvent("wishlist-updated", {
+          detail: { productId: product._id, isWishlisted: false },
+        }));
         toast.success("Removed from wishlist");
       } else {
         await api.post("/wishlist/add", {
@@ -279,6 +282,9 @@ function ProductDetails() {
         });
 
         setInWishlist(true);
+        window.dispatchEvent(new CustomEvent("wishlist-updated", {
+          detail: { productId: product._id, isWishlisted: true },
+        }));
         toast.success("Added to wishlist");
       }
     } catch (err) {

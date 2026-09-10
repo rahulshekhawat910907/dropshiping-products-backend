@@ -277,6 +277,18 @@ const validateProductData = async (
     }
   }
 
+  if (hasValue(data.commissionPercent)) {
+    const commissionPercent = Number(data.commissionPercent);
+
+    if (
+      Number.isNaN(commissionPercent) ||
+      commissionPercent < 0 ||
+      commissionPercent > 100
+    ) {
+      return "Commission must be between 0 and 100 percent";
+    }
+  }
+
 
   const supplierValidation =
     await validateSupplier(
@@ -326,7 +338,7 @@ const buildProductData = (data, extra = {}) => {
     supplierPrice: dropshipping ? Number(data.supplierPrice || 0) : 0,
     commissionPercent: hasValue(data.commissionPercent)
       ? Math.min(Math.max(Number(data.commissionPercent), 0), 100)
-      : 5,
+      : null,
     tags: Array.isArray(data.tags)
       ? data.tags.map((tag) => cleanText(tag)).filter(Boolean)
       : [],
@@ -675,6 +687,10 @@ const createMultipleProducts =
                   data.supplierPrice || 0
                 )
               : 0,
+
+          commissionPercent: hasValue(data.commissionPercent)
+            ? Math.min(Math.max(Number(data.commissionPercent), 0), 100)
+            : null,
 
           tags:
             Array.isArray(
@@ -1122,7 +1138,7 @@ const getAllProducts =
         Product.find(filter)
           .populate(
             "category",
-            "name slug image"
+            "name slug image commissionPercent"
           )
           .populate(
             "supplier",

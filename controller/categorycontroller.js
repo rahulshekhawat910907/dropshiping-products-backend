@@ -12,6 +12,7 @@ const createCategory = async (req, res) => {
       order,
       isActive,
       featured,
+      commissionPercent,
     } = req.body;
 
     if (!name) {
@@ -42,6 +43,17 @@ const createCategory = async (req, res) => {
       });
     }
 
+    const parsedCommission = commissionPercent === undefined || commissionPercent === "" || commissionPercent === null
+      ? null
+      : Number(commissionPercent);
+
+    if (parsedCommission !== null && (!Number.isFinite(parsedCommission) || parsedCommission < 0 || parsedCommission > 100)) {
+      return res.status(400).json({
+        success: false,
+        message: "Commission must be between 0 and 100 percent",
+      });
+    }
+
     const category = await Category.create({
       name,
       slug: categorySlug,
@@ -51,6 +63,7 @@ const createCategory = async (req, res) => {
       order,
       isActive,
       featured,
+      commissionPercent: parsedCommission,
     });
 
     res.status(201).json({
@@ -196,6 +209,7 @@ const updateCategory = async (req, res) => {
       order,
       isActive,
       featured,
+      commissionPercent,
     } = req.body;
 
     if (name) {
@@ -242,6 +256,29 @@ const updateCategory = async (req, res) => {
 
     if (featured !== undefined) {
       category.featured = featured;
+    }
+
+    if (commissionPercent !== undefined) {
+      if (commissionPercent === "" || commissionPercent === null) {
+        category.commissionPercent = null;
+        await category.save();
+        return res.status(200).json({
+          success: true,
+          message: "Category updated successfully",
+          category,
+        });
+      }
+
+      const parsedCommission = Number(commissionPercent);
+
+      if (!Number.isFinite(parsedCommission) || parsedCommission < 0 || parsedCommission > 100) {
+        return res.status(400).json({
+          success: false,
+          message: "Commission must be between 0 and 100 percent",
+        });
+      }
+
+      category.commissionPercent = parsedCommission;
     }
 
     await category.save();

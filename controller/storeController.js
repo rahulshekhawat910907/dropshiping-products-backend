@@ -606,7 +606,7 @@ const product = await Product.findOne({
   _id: productId,
   isActive: true,
   approvalStatus: "approved",
-});
+}).populate("category", "commissionPercent");
 
 if (!product) {
   return res.status(404).json({
@@ -617,7 +617,7 @@ if (!product) {
 
 const basePrice = Number(product.salePrice > 0 ? product.salePrice : product.price);
 const commissionPercent = Math.min(
-  Math.max(Number(product.commissionPercent ?? 5), 0),
+  Math.max(Number(product.category?.commissionPercent ?? product.commissionPercent ?? 5), 0),
   100
 );
 const commissionAmount = Number((basePrice * commissionPercent / 100).toFixed(2));

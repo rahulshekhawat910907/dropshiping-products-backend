@@ -47,6 +47,13 @@ const categorySchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+
+    commissionPercent: {
+      type: Number,
+      default: null,
+      min: 0,
+      max: 100,
+    },
   },
   {
     timestamps: true,
